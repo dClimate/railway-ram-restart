@@ -9,6 +9,7 @@ const graphqlClient = new GraphQLClient(ENDPOINT, {
     headers: {
         Authorization: `Bearer ${process.env.RAILWAY_API_TOKEN}`,
     },
+    cache: 'no-cache',
 })
 
 async function railwayGraphQLRequest(query, variables) {
