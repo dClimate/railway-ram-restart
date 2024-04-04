@@ -18,12 +18,10 @@
   },
   "homepage": "https://github.com/dClimate/railway-ram-restart#readme",
   "dependencies": {
+    "croner": "^8.0.1",
     "dotenv": "^16.4.5",
     "graphql": "^16.8.0",
-    "graphql-request": "^6.1.0",
-    "node-cron": "^3.0.3"
+    "graphql-request": "^6.1.0"
   },
-  "devDependencies": {
-    "@types/node-cron": "^3.0.11"
-  }
+  "devDependencies": {}
 }

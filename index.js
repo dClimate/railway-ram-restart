@@ -1,5 +1,5 @@
-const cron = require('node-cron');
 const { gql, GraphQLClient } = require('graphql-request')
+const { Cron } = require("croner");
 require('dotenv').config(); 
 
 
@@ -208,13 +208,13 @@ async function forceRestart() {
 }
 
 if (process.env.MAX_RAM_CRON_INTERVAL_CHECK) {
-    cron.schedule(process.env.MAX_RAM_CRON_INTERVAL_CHECK, async () => {
+    Cron(process.env.MAX_RAM_CRON_INTERVAL_CHECK, async () => {
         console.log('Checking Ram Usage...');
         checkRamRestart();
       });;
 }
 if (process.env.CRON_INTERVAL_RESTART) {
-    cron.schedule(process.env.CRON_INTERVAL_RESTART, async () => {
+    Cron(process.env.CRON_INTERVAL_RESTART, async () => {
         console.log('Restarting Service...');
         forceRestart();
       });;
