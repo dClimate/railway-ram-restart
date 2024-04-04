@@ -9,7 +9,8 @@
 |---------------------|:------------------------:|---------|---------------------------------------------------------------------------------------------------|
 | RAILWAY_API_TOKEN        | [x] |         | Railway Token. See: https://railway.app/account/tokens                                       |
 | RAILWAY_PROJECT_ID      |  [x]    |  |The id of the project to create environments on. Can be found on Settings -> General page                               |
-| RAILWAY_ENVIRONMENT_NAME        | [x]|         | The name of the environment to base the PRs off of.                                 |
+| RAILWAY_ENVIRONMENT_NAME        | [x]|         | The name of the environment to find the deployment.                                 |
+| RAILWAY_ENVIRONMENT_ID        | [x]|         | The id of the environment to find the deployment.                                 |
 | TARGET_SERVICE_NAME       | [x] |         | The name of the service you want to target in Railway                |
 | MAX_RAM_GB         | []  |         | The max ram  threshold to trigger a restart. Required if using MAX_RAM_CRON_INTERVAL_CHECK  |
 | MAX_RAM_CRON_INTERVAL_CHECK         | []  |         | The cron interval. Example "*/1 * * * *" |
