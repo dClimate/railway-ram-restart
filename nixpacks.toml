@@ -1,0 +1,16 @@
+# https://nixpacks.com/docs/configuration/file
+
+providers = ['node'] # force python as the only provider, otherwise railway may think this is a node project
+
+# set up some variables to minimize annoyance
+[variables]
+NIXPACKS_NODE_VERSION = '18' # Set Node.js version
+NPM_CONFIG_FUND = 'false' # the fund notification is is also pretty useless in a production environment
+NPM_CONFIG_UPDATE_NOTIFIER = 'false' # the node update notification is relatively useless in a production environment
+PIP_DISABLE_PIP_VERSION_CHECK = '1' # the pip update notification is relatively useless in a production environment
+
+[phases.setup]
+nixPkgs = ['nodejs'] # add nodejs since it is needed to build the frontend
+
+[phases.install]
+cmds = [ "npm install"]

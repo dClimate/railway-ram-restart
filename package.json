@@ -1,0 +1,29 @@
+{
+  "name": "railway-ram-restart",
+  "version": "1.0.0",
+  "description": "Service to check ram usage and restart targeted service",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dClimate/railway-ram-restart.git"
+  },
+  "author": "Faolain + TheGreatAlgo",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dClimate/railway-ram-restart/issues"
+  },
+  "homepage": "https://github.com/dClimate/railway-ram-restart#readme",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "graphql": "^16.8.0",
+    "graphql-request": "^6.1.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/node-cron": "^3.0.11"
+  }
+}
