@@ -5,14 +5,15 @@ require('dotenv').config();
 
 const ENDPOINT = 'https://backboard.railway.app/graphql/v2';
 
+const graphqlClient = new GraphQLClient(ENDPOINT, {
+    headers: {
+        Authorization: `Bearer ${process.env.RAILWAY_API_TOKEN}`,
+    },
+})
+
 async function railwayGraphQLRequest(query, variables) {
-    const client = new GraphQLClient(ENDPOINT, {
-        headers: {
-            Authorization: `Bearer ${process.env.RAILWAY_API_TOKEN}`,
-        },
-    })
     try {
-        return await client.request({ document: query, variables })
+        return await graphqlClient.request({ document: query, variables })
     } catch (error) {
         console.log(`Action failed with error: ${error}`);
     }
