@@ -3,6 +3,8 @@
 ## Introduction to Railway
 [Railway](https://railway.app/) is a PaaS Cloud Service which makes it easy to deploy simple or complex services which can depend on many other services (APIs Databases etc)
 
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/1FHSG9?referralCode=ChuY7I)
+
 ## Inputs
 
 | Name                |         Required         | Default | Description                                                                                       |
