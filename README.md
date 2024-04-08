@@ -1,4 +1,4 @@
-# Railway PR Deploy Action
+# Railway Ram Monitor
 
 ## Introduction to Railway
 [Railway](https://railway.app/) is a PaaS Cloud Service which makes it easy to deploy simple or complex services which can depend on many other services (APIs Databases etc)
