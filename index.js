@@ -17,6 +17,7 @@ async function railwayGraphQLRequest(query, variables) {
         return await graphqlClient.request({ document: query, variables })
     } catch (error) {
         console.log(`Action failed with error: ${error}`);
+        return null;
     }
 }
 
@@ -171,7 +172,13 @@ async function checkRamRestart() {
                 // Check the service name to see if it matches the service we are looking for
                 if (service.name === process.env.TARGET_SERVICE_NAME) {
                     // Get the metrics for the service
-                    const { metrics } = await getMetrics(process.env.RAILWAY_PROJECT_ID, serviceId, process.env.RAILWAY_ENVIRONMENT_ID);
+                    const metricsResponse = await getMetrics(process.env.RAILWAY_PROJECT_ID, serviceId, process.env.RAILWAY_ENVIRONMENT_ID);
+                    if (!metricsResponse || !Array.isArray(metricsResponse.metrics) || metricsResponse.metrics.length === 0) {
+                        console.log("No metrics available for service, skipping threshold check:", service.name);
+                        continue;
+                    }
+
+                    const { metrics } = metricsResponse;
                     const maxRamGb = Number(process.env.MAX_RAM_GB);
                     const replicaMetrics = metrics
                         .map((metric) => {
