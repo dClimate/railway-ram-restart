@@ -82,10 +82,6 @@ async function deploymentInstanceRestart(deploymentId) {
 }
 
 async function getMetrics(projectId, serviceId, environmentId) {
-    console.log("Getting Metrics...")
-    console.log("Project ID:", projectId)
-    console.log("Service ID:", serviceId)
-    console.log("Environment ID:", environmentId)
     // Get current DateTime
     const date = new Date();
     try {
@@ -131,6 +127,11 @@ function getLatestMetricValue(metric) {
         return new Date(current.ts) > new Date(latest.ts) ? current : latest;
     });
     return latestPoint.value;
+}
+
+function shortId(value) {
+    if (!value) return "unknown";
+    return value.slice(0, 8);
 }
 
 async function getService(serviceId) {
@@ -192,10 +193,22 @@ async function checkRamRestart() {
                             };
                         })
                         .filter((metric) => metric.latestMemoryUsageGb !== null);
+                    replicaMetrics.sort((a, b) => b.latestMemoryUsageGb - a.latestMemoryUsageGb);
 
-                    console.log("Replica metrics:");
-                    console.log(JSON.stringify(replicaMetrics, null, 2));
-                    console.log("Max Ram Usage:", maxRamGb);
+                    const maxReplicaMemoryGb = replicaMetrics.reduce((max, metric) => {
+                        return Math.max(max, metric.latestMemoryUsageGb);
+                    }, 0);
+                    const replicasOverThreshold = replicaMetrics.filter((metric) => metric.aboveThreshold).length;
+                    console.log(
+                        `[RAM] service=${service.name} replicas=${replicaMetrics.length} thresholdGb=${maxRamGb} maxReplicaGb=${maxReplicaMemoryGb.toFixed(3)} overThreshold=${replicasOverThreshold}`
+                    );
+                    console.log("[RAM] replicas:");
+                    replicaMetrics.forEach((metric, index) => {
+                        const status = metric.aboveThreshold ? "OVER" : "OK";
+                        console.log(
+                            `[RAM] ${index + 1}. replica=${shortId(metric.deploymentInstanceId)} usageGb=${metric.latestMemoryUsageGb.toFixed(3)} status=${status}`
+                        );
+                    });
 
                     const replicaOverThreshold = replicaMetrics.find((metric) => metric.aboveThreshold);
                     if (replicaOverThreshold) {
@@ -204,7 +217,9 @@ async function checkRamRestart() {
                             console.log("No deploymentId found for restart.");
                             continue;
                         }
-                        console.log("Threshold exceeded by replica:", replicaOverThreshold.deploymentInstanceId);
+                        console.log(
+                            `[RAM] threshold exceeded: replica=${replicaOverThreshold.deploymentInstanceId} usageGb=${replicaOverThreshold.latestMemoryUsageGb.toFixed(3)} thresholdGb=${maxRamGb}`
+                        );
                         await deploymentInstanceRestart(deploymentId);
                         console.log("Service Restarted")
                     }
@@ -251,12 +266,12 @@ async function forceRestart() {
 if (process.env.MAX_RAM_CRON_INTERVAL_CHECK) {
     Cron(process.env.MAX_RAM_CRON_INTERVAL_CHECK, async () => {
         console.log('Checking Ram Usage...');
-        checkRamRestart();
+        await checkRamRestart();
       });;
 }
 if (process.env.CRON_INTERVAL_RESTART) {
     Cron(process.env.CRON_INTERVAL_RESTART, async () => {
         console.log('Restarting Service...');
-        forceRestart();
+        await forceRestart();
       });;
 }
