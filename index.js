@@ -17,6 +17,7 @@ async function railwayGraphQLRequest(query, variables) {
         return await graphqlClient.request({ document: query, variables })
     } catch (error) {
         console.log(`Action failed with error: ${error}`);
+        return null;
     }
 }
 
@@ -81,27 +82,29 @@ async function deploymentInstanceRestart(deploymentId) {
 }
 
 async function getMetrics(projectId, serviceId, environmentId) {
-    console.log("Getting Metrics...")
-    console.log("Project ID:", projectId)
-    console.log("Service ID:", serviceId)
-    console.log("Environment ID:", environmentId)
     // Get current DateTime
     const date = new Date();
     try {
         let query = 
-        `query metrics($startDate: DateTime!, $projectId: String!, $serviceId: String! = "", $environmentId: String = "") {
+        `query metrics($startDate: DateTime!, $projectId: String!, $serviceId: String, $environmentId: String) {
             metrics(
               projectId: $projectId
               measurements: MEMORY_USAGE_GB
               startDate: $startDate
               serviceId: $serviceId
               environmentId: $environmentId
+              groupBy: [SERVICE_ID, DEPLOYMENT_INSTANCE_ID, DEPLOYMENT_ID]
             ) {
                 values {
                     ts
                     value
-                    }
+                }
                 measurement
+                tags {
+                    serviceId
+                    deploymentInstanceId
+                    deploymentId
+                }
             }
           }`
 
@@ -116,6 +119,19 @@ async function getMetrics(projectId, serviceId, environmentId) {
     } catch (error) {
         console.log(`Action failed with error: ${error}`);
     }
+}
+
+function getLatestMetricValue(metric) {
+    if (!metric?.values?.length) return null;
+    const latestPoint = metric.values.reduce((latest, current) => {
+        return new Date(current.ts) > new Date(latest.ts) ? current : latest;
+    });
+    return latestPoint.value;
+}
+
+function shortId(value) {
+    if (!value) return "unknown";
+    return value.slice(0, 8);
 }
 
 async function getService(serviceId) {
@@ -157,14 +173,53 @@ async function checkRamRestart() {
                 // Check the service name to see if it matches the service we are looking for
                 if (service.name === process.env.TARGET_SERVICE_NAME) {
                     // Get the metrics for the service
-                    const { metrics } = await getMetrics(process.env.RAILWAY_PROJECT_ID, serviceId, process.env.RAILWAY_ENVIRONMENT_ID);
-                    // Compare the metrics to the threshold process.en.MAX_RAM_GB
-                    // If the metrics are greater than the threshold, restart the service
-                    const latestMetric = metrics[0].values[0].value;
-                    console.log("Current Ram Usage:", latestMetric)
-                    console.log("Max Ram Usage:", Number(process.env.MAX_RAM_GB))
-                    if (latestMetric >= Number(process.env.MAX_RAM_GB)) {
-                        const deploymentId = service.deployments.edges.filter((edge) => edge.node.environmentId === process.env.RAILWAY_ENVIRONMENT_ID)[0].node.id;
+                    const metricsResponse = await getMetrics(process.env.RAILWAY_PROJECT_ID, serviceId, process.env.RAILWAY_ENVIRONMENT_ID);
+                    if (!metricsResponse || !Array.isArray(metricsResponse.metrics) || metricsResponse.metrics.length === 0) {
+                        console.log("No metrics available for service, skipping threshold check:", service.name);
+                        continue;
+                    }
+
+                    const { metrics } = metricsResponse;
+                    const maxRamGb = Number(process.env.MAX_RAM_GB);
+                    const replicaMetrics = metrics
+                        .map((metric) => {
+                            const latestValue = getLatestMetricValue(metric);
+                            return {
+                                serviceId: metric.tags?.serviceId || serviceId,
+                                deploymentInstanceId: metric.tags?.deploymentInstanceId || null,
+                                deploymentId: metric.tags?.deploymentId || null,
+                                latestMemoryUsageGb: latestValue,
+                                aboveThreshold: latestValue !== null && latestValue >= maxRamGb,
+                            };
+                        })
+                        .filter((metric) => metric.latestMemoryUsageGb !== null);
+                    replicaMetrics.sort((a, b) => b.latestMemoryUsageGb - a.latestMemoryUsageGb);
+
+                    const maxReplicaMemoryGb = replicaMetrics.reduce((max, metric) => {
+                        return Math.max(max, metric.latestMemoryUsageGb);
+                    }, 0);
+                    const replicasOverThreshold = replicaMetrics.filter((metric) => metric.aboveThreshold).length;
+                    console.log(
+                        `[RAM] service=${service.name} replicas=${replicaMetrics.length} thresholdGb=${maxRamGb} maxReplicaGb=${maxReplicaMemoryGb.toFixed(3)} overThreshold=${replicasOverThreshold}`
+                    );
+                    console.log("[RAM] replicas:");
+                    replicaMetrics.forEach((metric, index) => {
+                        const status = metric.aboveThreshold ? "OVER" : "OK";
+                        console.log(
+                            `[RAM] ${index + 1}. replica=${shortId(metric.deploymentInstanceId)} usageGb=${metric.latestMemoryUsageGb.toFixed(3)} status=${status}`
+                        );
+                    });
+
+                    const replicaOverThreshold = replicaMetrics.find((metric) => metric.aboveThreshold);
+                    if (replicaOverThreshold) {
+                        const deploymentId = replicaOverThreshold.deploymentId || service.deployments.edges.filter((edge) => edge.node.environmentId === process.env.RAILWAY_ENVIRONMENT_ID)[0]?.node?.id;
+                        if (!deploymentId) {
+                            console.log("No deploymentId found for restart.");
+                            continue;
+                        }
+                        console.log(
+                            `[RAM] threshold exceeded: replica=${replicaOverThreshold.deploymentInstanceId} usageGb=${replicaOverThreshold.latestMemoryUsageGb.toFixed(3)} thresholdGb=${maxRamGb}`
+                        );
                         await deploymentInstanceRestart(deploymentId);
                         console.log("Service Restarted")
                     }
@@ -211,13 +266,12 @@ async function forceRestart() {
 if (process.env.MAX_RAM_CRON_INTERVAL_CHECK) {
     Cron(process.env.MAX_RAM_CRON_INTERVAL_CHECK, async () => {
         console.log('Checking Ram Usage...');
-        checkRamRestart();
+        await checkRamRestart();
       });;
 }
 if (process.env.CRON_INTERVAL_RESTART) {
     Cron(process.env.CRON_INTERVAL_RESTART, async () => {
         console.log('Restarting Service...');
-        forceRestart();
+        await forceRestart();
       });;
 }
-
