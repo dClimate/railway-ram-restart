@@ -19,6 +19,18 @@
 | CRON_INTERVAL_RESTART         | []  |         |  The cron interval to restart regardless of the ram usage|
 
 
+## Railway cutover
+
+Railway stops reading legacy configuration files on 1 December 2026.
+[railway-settings.json](./railway-settings.json) records the settings for the
+existing Aegis monitors.
+
+1. In the [Aegis project](https://railway.com/project/7b1d4989-a0d3-4bb1-98de-a5372becb82d), preview and save the builder, start command, single replica, sleep setting, and restart policy on staging `railway-ram-restart` and production `railway-ram-restart-prod`. Compare them with the last successful deployment and commit the scoped settings without redeploying.
+2. Merge into `main` after both services have their saved settings. The rename removes the automatically discovered root file.
+3. Redeploy staging first, then production. Confirm that each deployment uses the saved settings, resolves no legacy file, and runs a normal RAM metrics poll for the intended target. Verify the monitor through its logs without forcing a target restart. Roll back to the previous healthy monitor deployment if startup fails.
+
+[Railway migration guide](https://docs.railway.com/infrastructure-as-code#migrating-from-config-as-code)
+
 ## How To Use
 ```
    yarn install
